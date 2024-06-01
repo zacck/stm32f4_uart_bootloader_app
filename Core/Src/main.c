@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+	/* USER CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file           : main.c
@@ -106,12 +106,26 @@ int main(void)
     if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_SET)
     {
   	  printk("BL_DEBUG_MSG: Button is pressed ... going to BL mode\n\r");
+
+  	  bootloader_uart_read_data();
     } else
     {
   	  printk("BL_DEBUG_MSG: Button is not pressed ... going to App mode\n\r");
 
+  	  bootloader_jump_to_user_app();
+
     }
   /* USER CODE END 3 */
+}
+
+
+void bootloader_uart_read_data(void)
+{
+
+}
+void bootloader_jump_to_user_app(void)
+{
+
 }
 
 /*Formatted message over uart*/
