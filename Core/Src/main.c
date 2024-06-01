@@ -123,8 +123,38 @@ void bootloader_uart_read_data(void)
 {
 
 }
+
+//fetch user application reset handler
+static volatile uint32_t resethandler_address = (FLASH_SECTOR2_BASE_ADDRESS + 4);
+static volatile void (*app_reset_handler)(void);
+
+
+/*
+ * Function to jump to user application
+ */
 void bootloader_jump_to_user_app(void)
 {
+	//function pointer to user app reset handler
+
+	printk("LOADER_DEBUG_MSG: Bootloader now jumping to user app \r\n");
+
+	//get new MSP value for user app
+	volatile uint32_t msp_value = *(uint32_t *)(FLASH_SECTOR2_BASE_ADDRESS);
+	printk("LOADER_DEBUG_MSG: MSP for user app : %#x \r\n", msp_value);
+
+	//use CMSIS to move MSP
+	__set_MSP(msp_value);
+
+	app_reset_handler = (void *)*(volatile uint32_t *)resethandler_address;
+
+
+
+
+	printk("LOADER_DEBUG_MSG: app reset handler is now : %#x -> Proceeding with jump\r\n", app_reset_handler);
+
+	// Invoke user app reset handler
+	app_reset_handler();
+
 
 }
 
