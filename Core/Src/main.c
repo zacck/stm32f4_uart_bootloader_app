@@ -153,7 +153,7 @@ uint8_t bootloader_verify_crc(uint8_t *pData, uint32_t len, uint32_t crc_host) {
 void bootloader_uart_write_data(uint8_t *pBuffer, uint32_t len) {
 }
 uint8_t get_bootloader_version(void) {
-	uint8_t version = 201;
+	uint8_t version = 0x5C;
 	return version;
 }
 void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer) {
@@ -220,7 +220,12 @@ void bootloader_uart_read_data(void)
 		rec_len = bl_rx_buffer[0];
 		HAL_UART_Receive(&huart2, &bl_rx_buffer[1], rec_len, HAL_MAX_DELAY);
 		switch(bl_rx_buffer[1]){
-
+		case: BL_GET_VER;
+			bootloader_handle_getver_cmd(bl_rx_buffer);
+			break;
+		default:
+			printk("LOADER_ERROR_MSG: Invalid command from host: %#n \r\n", bl_rx_buffer[1]);
+			break;
 		}
 	}
 
