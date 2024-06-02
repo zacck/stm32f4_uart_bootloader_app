@@ -31,6 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdint.h>
 
 /* USER CODE END Includes */
 
@@ -55,6 +56,17 @@ void Error_Handler(void);
 /* USER CODE BEGIN EFP */
 void bootloader_uart_read_data(void);
 void bootloader_jump_to_user_app(void);
+void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer);
+void bootloader_handle_gethelp_cmd(uint8_t *bl_rx_buffer);
+void bootloader_handle_getcid_cmd(uint8_t *bl_rx_buffer);
+void bootloader_handle_getrdp_cmd(uint8_t *bl_rx_buffer);
+void bootloader_handle_go_cmd(uint8_t *bl_rx_buffer);
+void bootloader_handle_flash_erase_cmd(uint8_t *bl_rx_buffer);
+void bootloader_handle_mem_write_cmd(uint8_t *bl_rx_buffer);
+void bootloader_handle_endis_rw_protect(uint8_t *bl_rx_buffer);
+void bootloader_handle_mem_read(uint8_t *bl_rx_buffer);
+void bootloader_handle_read_sector_status(uint8_t *bl_rx_buffer);
+void bootloader_handle_read_otp(uint8_t *bl_rx_buffer);
 
 /* USER CODE END EFP */
 
@@ -128,6 +140,31 @@ void bootloader_jump_to_user_app(void);
 
 /* USER CODE BEGIN Private defines */
 #define FLASH_SECTOR2_BASE_ADDRESS  0x08008000U
+
+//Read bootloader version
+#define BL_GET_VER 0x41
+//Show all commands
+#define BL_GET_HELP 0x42
+//Get MCU ID
+#define BL_GET_CID 0x43
+//read flash protection status
+#define BL_GET_RDP_STATUS 0x44
+//define jump to specific address
+#define BL_GO_TO_ADDR 0x45
+//Mass erase or sector erase
+#define BL_FLASH_ERASE 0x46
+//write data to MCU Mem
+#define BL_MEM_WRITE 0x47
+//Enable or disable R/W protection
+#define BL_ENDIS_RW_PROTECT 0x48
+//read data from MCU mem
+#define BL_MEM_READ 0x49
+//READ ALL sector protection status
+#define BL_READ_SECTOR_STATUS 0x4A
+//read OTP contents
+#define BL_OTP_READ 0x4B
+
+
 
 /* USER CODE END Private defines */
 
