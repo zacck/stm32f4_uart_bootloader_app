@@ -70,6 +70,8 @@ void bootloader_handle_read_otp(uint8_t *bl_rx_buffer);
 void bootloader_send_nack(void);
 void bootloader_send_ack(uint8_t command_code, uint8_t follow_len);
 uint8_t get_bootloader_version(void);
+uint8_t bootloader_verify_crc(uint8_t *pData, uint32_t len, uint32_t crc_host);
+void bootloader_uart_write_data(uint8_t *pBuffer, uint32_t len);
 
 /* USER CODE END EFP */
 
@@ -170,6 +172,11 @@ uint8_t get_bootloader_version(void);
 //ACK and NACK
 #define BL_ACK 0xA5
 #define BL_NACK 0x7
+
+//CRC F and S
+#define VERIFY_CRC_FAIL 1
+#define VERIFY_CRC_SUCCESS 0
+
 
 
 
