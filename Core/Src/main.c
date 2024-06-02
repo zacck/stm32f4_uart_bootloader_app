@@ -21,8 +21,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#define __STDC_WANT_LIB_EXT2__ 1
 #include <stdarg.h>
 #include <string.h>
+#include <stdio.h>
 
 /* USER CODE END Includes */
 
@@ -119,6 +121,21 @@ int main(void)
     }
   /* USER CODE END 3 */
 }
+
+/** Bootloader handlers **/
+void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer){}
+void bootloader_handle_gethelp_cmd(uint8_t *bl_rx_buffer){}
+void bootloader_handle_getcid_cmd(uint8_t *bl_rx_buffer){}
+void bootloader_handle_getrdp_cmd(uint8_t *bl_rx_buffer){}
+void bootloader_handle_go_cmd(uint8_t *bl_rx_buffer){}
+void bootloader_handle_flash_erase_cmd(uint8_t *bl_rx_buffer){}
+void bootloader_handle_mem_write_cmd(uint8_t *bl_rx_buffer){}
+void bootloader_handle_endis_rw_protect(uint8_t *bl_rx_buffer){}
+void bootloader_handle_mem_read(uint8_t *bl_rx_buffer){}
+void bootloader_handle_read_sector_status(uint8_t *bl_rx_buffer){}
+void bootloader_handle_read_otp(uint8_t *bl_rx_buffer){}
+
+/** END Bootloader handlers **/
 
 
 void bootloader_uart_read_data(void)
