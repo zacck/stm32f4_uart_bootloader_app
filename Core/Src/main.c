@@ -62,6 +62,8 @@ void printk(char *format,...);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+#define BL_RX_LEN 200
+uint8_t bl_rx_buffer[BL_RX_LEN];
 
 /* USER CODE END 0 */
 
@@ -121,6 +123,20 @@ int main(void)
 
 void bootloader_uart_read_data(void)
 {
+	//Read commands from host
+	uint8_t rec_len = 0;
+
+	while(1){
+		memset(bl_rx_buffer, 0, 200);
+
+		// Now read and decode commands from host
+		HAL_UART_Receive(&huart2, bl_rx_buffer, 1, HAL_MAX_DELAY);
+		rec_len = bl_rx_buffer[0];
+		HAL_UART_Receive(&huart2, &bl_rx_buffer[1], rec_len, HAL_MAX_DELAY);
+		switch(bl_rx_buffer[1]){
+
+		}
+	}
 
 }
 
