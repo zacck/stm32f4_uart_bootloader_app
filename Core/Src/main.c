@@ -67,6 +67,7 @@ void printk(char *format,...);
 #define BL_RX_LEN 200
 uint8_t bl_rx_buffer[BL_RX_LEN];
 
+
 /* USER CODE END 0 */
 
 /**
@@ -109,12 +110,12 @@ int main(void)
   /* Infinite loop */
     if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_SET)
     {
-  	  printk("BL_DEBUG_MSG: Button is pressed ... going to BL mode\n\r");
+  	  printk("LOADER_DEBUG_MSG: Button is pressed ... going to BL mode\n\r");
 
   	  bootloader_uart_read_data();
     } else
     {
-  	  printk("BL_DEBUG_MSG: Button is not pressed ... going to App mode\n\r");
+  	  printk("LOADER_DEBUG_MSG: Button is not pressed ... going to App mode\n\r");
 
   	  bootloader_jump_to_user_app();
 
@@ -123,17 +124,59 @@ int main(void)
 }
 
 /** Bootloader handlers **/
-void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer){}
-void bootloader_handle_gethelp_cmd(uint8_t *bl_rx_buffer){}
-void bootloader_handle_getcid_cmd(uint8_t *bl_rx_buffer){}
-void bootloader_handle_getrdp_cmd(uint8_t *bl_rx_buffer){}
-void bootloader_handle_go_cmd(uint8_t *bl_rx_buffer){}
-void bootloader_handle_flash_erase_cmd(uint8_t *bl_rx_buffer){}
-void bootloader_handle_mem_write_cmd(uint8_t *bl_rx_buffer){}
-void bootloader_handle_endis_rw_protect(uint8_t *bl_rx_buffer){}
-void bootloader_handle_mem_read(uint8_t *bl_rx_buffer){}
-void bootloader_handle_read_sector_status(uint8_t *bl_rx_buffer){}
-void bootloader_handle_read_otp(uint8_t *bl_rx_buffer){}
+void bootloader_send_nack(void) {
+	//lets send an nack byte
+	uint8_t nack = BL_NACK;
+	HAL_UART_Transmit(&huart2, &nack, 1, HAL_MAX_DELAY);
+}
+void bootloader_send_ack(uint8_t command_code, uint8_t follow_len) {
+	//lets send an ack byte as well as confirm the len we got
+	uint8_t ack_buf[2];
+	ack_buf[0] = BL_ACK;
+	ack_buf[1] = follow_len;
+	HAL_UART_Transmit(&huart2, ack_buf, 2, HAL_MAX_DELAY);
+}
+uint8_t get_bootloader_version(void);
+void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer) {
+	uint8_t bl_version;
+
+	//verify checksum of command
+	printk("LOADER_DEBUG_MSG: Handling GET_VER_COMMAND \r\n");
+	if (!bootloader_verify_crc(&bl_rx_buffer[0], bl_rx_buffer[0] + 1, 0)) {
+		printk("LOADER_DEBUG_MSG: checksum success! \r\n");
+		//Correct crc
+		bootloader_send_ack(bl_rx_buffer[0], 1);
+		bl_version = get_bootloader_version();
+		printk("LOADER_DEBUG_MSG: BL_VER : %d %#x \r\n", bl_version,
+				bl_version);
+		bootloader_uart_write_data(&bl_version, 1);
+	} else {
+		//Bad checksum NACK
+		printk("LOADER_DEBUG_MSG: checksum fail !c \r\n");
+		bootloader_send_nack();
+
+	}
+}
+void bootloader_handle_gethelp_cmd(uint8_t *bl_rx_buffer) {
+}
+void bootloader_handle_getcid_cmd(uint8_t *bl_rx_buffer) {
+}
+void bootloader_handle_getrdp_cmd(uint8_t *bl_rx_buffer) {
+}
+void bootloader_handle_go_cmd(uint8_t *bl_rx_buffer) {
+}
+void bootloader_handle_flash_erase_cmd(uint8_t *bl_rx_buffer) {
+}
+void bootloader_handle_mem_write_cmd(uint8_t *bl_rx_buffer) {
+}
+void bootloader_handle_endis_rw_protect(uint8_t *bl_rx_buffer) {
+}
+void bootloader_handle_mem_read(uint8_t *bl_rx_buffer) {
+}
+void bootloader_handle_read_sector_status(uint8_t *bl_rx_buffer) {
+}
+void bootloader_handle_read_otp(uint8_t *bl_rx_buffer) {
+}
 
 /** END Bootloader handlers **/
 

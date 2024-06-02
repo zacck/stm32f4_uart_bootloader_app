@@ -67,6 +67,9 @@ void bootloader_handle_endis_rw_protect(uint8_t *bl_rx_buffer);
 void bootloader_handle_mem_read(uint8_t *bl_rx_buffer);
 void bootloader_handle_read_sector_status(uint8_t *bl_rx_buffer);
 void bootloader_handle_read_otp(uint8_t *bl_rx_buffer);
+void bootloader_send_nack(void);
+void bootloader_send_ack(uint8_t command_code, uint8_t follow_len);
+uint8_t get_bootloader_version(void);
 
 /* USER CODE END EFP */
 
@@ -163,6 +166,10 @@ void bootloader_handle_read_otp(uint8_t *bl_rx_buffer);
 #define BL_READ_SECTOR_STATUS 0x4A
 //read OTP contents
 #define BL_OTP_READ 0x4B
+
+//ACK and NACK
+#define BL_ACK 0xA5
+#define BL_NACK 0x7
 
 
 
