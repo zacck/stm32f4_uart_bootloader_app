@@ -61,6 +61,7 @@ static void MX_USART2_UART_Init(void);
 void printk(char *format, ...);
 uint16_t get_mcu_chip_id(void);
 uint8_t get_flash_rdp_level(void);
+uint8_t verify_address(uint32_t go_address);
 
 /* USER CODE END PFP */
 
@@ -289,7 +290,63 @@ void bootloader_handle_getrdp_cmd(uint8_t *bl_rx_buffer) {
 	}
 
 }
+
+uint8_t verify_address(uint32_t go_address){
+	if (go_address >= SRAM1_BASE && go_address <= SRAM1_END) {
+		return ADDR_VALID;
+	} else if (go_address >= SRAM2_BASE && go_address <= SRAM2_END) {
+		return ADDR_VALID;
+	} else if (go_address >= FLASH_BASE && go_address <= FLASH_END) {
+		return ADDR_VALID;
+	} else if (go_address >= BKPSRAM_BASE && go_address <= BKPSRAM_END) {
+		return ADDR_VALID;
+	} else
+		return ADDR_INVALID;
+
+}
+
+
 void bootloader_handle_go_cmd(uint8_t *bl_rx_buffer) {
+	uint32_t go_address = 0;
+	uint8_t addr_valid = ADDR_VALID;
+	uint8_t addr_invalid = ADDR_INVALID;
+
+	//length of our packet
+	uint32_t command_packet_len = bl_rx_buffer[0] + 1;
+
+	//extract crc from frame
+	uint32_t host_crc = *((uint32_t*) (bl_rx_buffer + command_packet_len - 4));
+
+	if (!bootloader_verify_crc(&bl_rx_buffer[0], command_packet_len - 4,
+			host_crc)) {
+		//printk("LOADER_DEBUG_MSG: checksum success! \r\n");
+		//Correct crc
+		bootloader_send_ack(bl_rx_buffer[0], 1);
+		go_address = *((uint32_t *)&bl_rx_buffer[2]);
+		if(verify_address(go_address) == ADDR_VALID)
+		{
+			//let host know all is well
+			bootloader_uart_write_data(&addr_valid, 1);
+			// Set the stack pointer
+			__set_MSP(*((uint32_t*) go_address));
+			// Get the reset handler address
+			uint32_t jump_address = *((volatile uint32_t*) (go_address + 4));
+			void (*reset_handler)(void) = (void*) jump_address;
+
+			// Jump to the reset handler
+			reset_handler();
+
+		} else {
+			bootloader_uart_write_data(&addr_invalid, 1);
+		}
+
+	} else {
+		//Bad checksum NACK
+		printk("LOADER_DEBUG_MSG: checksum fail !c \r\n");
+		bootloader_send_nack();
+
+	}
+
 }
 void bootloader_handle_flash_erase_cmd(uint8_t *bl_rx_buffer) {
 }
@@ -331,6 +388,9 @@ void bootloader_uart_read_data(void) {
 			break;
 		case BL_GET_RDP_STATUS:
 			bootloader_handle_getrdp_cmd(bl_rx_buffer);
+			break;
+		case BL_GO_TO_ADDR:
+			bootloader_handle_go_cmd(bl_rx_buffer);
 			break;
 		default:
 			printk("LOADER_ERROR_MSG: Invalid command from host: %#n \r\n",

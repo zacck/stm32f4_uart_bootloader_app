@@ -177,6 +177,17 @@ void bootloader_uart_write_data(uint8_t *pBuffer, uint32_t len);
 #define VERIFY_CRC_FAIL 1
 #define VERIFY_CRC_SUCCESS 0
 
+#define ADDR_VALID 0x00
+#define ADDR_INVALID 0x01
+
+#define SRAM1_SIZE            112*1024     // STM32F446RE has 112KB of SRAM1
+#define SRAM1_END             (SRAM1_BASE + SRAM1_SIZE)
+#define SRAM2_SIZE            16*1024     // STM32F446RE has 16KB of SRAM2
+#define SRAM2_END             (SRAM2_BASE + SRAM2_SIZE)
+#define FLASH_SIZE             512*1024     // STM32F446RE has 512KB of SRAM2
+#define BKPSRAM_SIZE           4*1024     // STM32F446RE has 4KB of SRAM2
+#define BKPSRAM_END            (BKPSRAM_BASE + BKPSRAM_SIZE)
+
 
 
 
