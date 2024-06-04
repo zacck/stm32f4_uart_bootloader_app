@@ -60,6 +60,7 @@ static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 void printk(char *format, ...);
 uint16_t get_mcu_chip_id(void);
+uint8_t get_flash_rdp_level(void);
 
 /* USER CODE END PFP */
 
@@ -249,7 +250,44 @@ void bootloader_handle_getcid_cmd(uint8_t *bl_rx_buffer) {
 	}
 
 }
+
+uint8_t get_flash_rdp_level(void)
+{
+	uint8_t rdp_status  = 0;
+
+	volatile uint32_t *pOB_addr = (uint32_t *) 0x1FFFC000;
+
+	rdp_status = (uint8_t)(*pOB_addr >> 8);
+
+	return rdp_status;
+}
+
 void bootloader_handle_getrdp_cmd(uint8_t *bl_rx_buffer) {
+	uint8_t rdp_level = 0x00;
+	//verify checksum of command
+	//printk("LOADER_DEBUG_MSG: Handling GET_VER_COMMAND \r\n");
+
+	//length of our packet
+	uint32_t command_packet_len = bl_rx_buffer[0] + 1;
+
+	//extract crc from frame
+	uint32_t host_crc = *((uint32_t*) (bl_rx_buffer + command_packet_len - 4));
+
+	if (!bootloader_verify_crc(&bl_rx_buffer[0], command_packet_len - 4,
+			host_crc)) {
+		//printk("LOADER_DEBUG_MSG: checksum success! \r\n");
+		//Correct crc
+		bootloader_send_ack(bl_rx_buffer[0], 1);
+		rdp_level = get_flash_rdp_level();
+		//printk("LOADER_DEBUG_MSG: BL_VER : %d %#x \r\n", bl_version,bl_version);
+		bootloader_uart_write_data(&rdp_level, 1);
+	} else {
+		//Bad checksum NACK
+		printk("LOADER_DEBUG_MSG: checksum fail !c \r\n");
+		bootloader_send_nack();
+
+	}
+
 }
 void bootloader_handle_go_cmd(uint8_t *bl_rx_buffer) {
 }
@@ -290,6 +328,9 @@ void bootloader_uart_read_data(void) {
 			break;
 		case BL_GET_CID:
 			bootloader_handle_getcid_cmd(bl_rx_buffer);
+			break;
+		case BL_GET_RDP_STATUS:
+			bootloader_handle_getrdp_cmd(bl_rx_buffer);
 			break;
 		default:
 			printk("LOADER_ERROR_MSG: Invalid command from host: %#n \r\n",
