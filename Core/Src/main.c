@@ -59,6 +59,7 @@ static void MX_CRC_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 void printk(char *format, ...);
+uint16_t get_mcu_chip_id(void);
 
 /* USER CODE END PFP */
 
@@ -213,7 +214,40 @@ void bootloader_handle_gethelp_cmd(uint8_t *bl_rx_buffer) {
 
 		}
 }
+
+uint16_t get_mcu_chip_id(void){
+	//Get CHIPID from DBMCU registers
+	uint16_t cid;
+	//use a mask to read only the 12 lower bits of IDCODE
+	cid = (uint16_t) (DBGMCU->IDCODE) & 0x0FFF;
+	return cid;
+}
 void bootloader_handle_getcid_cmd(uint8_t *bl_rx_buffer) {
+	uint16_t bl_cid_num = 0;
+	//verify checksum of command
+	//printk("LOADER_DEBUG_MSG: Handling GET_VER_COMMAND \r\n");
+
+	//length of our packet
+	uint32_t command_packet_len = bl_rx_buffer[0] + 1;
+
+	//extract crc from frame
+	uint32_t host_crc = *((uint32_t*) (bl_rx_buffer + command_packet_len - 4));
+
+	if (!bootloader_verify_crc(&bl_rx_buffer[0], command_packet_len - 4,
+			host_crc)) {
+		//printk("LOADER_DEBUG_MSG: checksum success! \r\n");
+		//Correct crc
+		bootloader_send_ack(bl_rx_buffer[0], 2);
+		bl_cid_num = get_mcu_chip_id();
+		//printk("LOADER_DEBUG_MSG: BL_VER : %d %#x \r\n", bl_version,bl_version);
+		bootloader_uart_write_data((uint8_t *)&bl_cid_num, 2);
+	} else {
+		//Bad checksum NACK
+		printk("LOADER_DEBUG_MSG: checksum fail !c \r\n");
+		bootloader_send_nack();
+
+	}
+
 }
 void bootloader_handle_getrdp_cmd(uint8_t *bl_rx_buffer) {
 }
@@ -253,6 +287,9 @@ void bootloader_uart_read_data(void) {
 			break;
 		case BL_GET_HELP:
 			bootloader_handle_gethelp_cmd(bl_rx_buffer);
+			break;
+		case BL_GET_CID:
+			bootloader_handle_getcid_cmd(bl_rx_buffer);
 			break;
 		default:
 			printk("LOADER_ERROR_MSG: Invalid command from host: %#n \r\n",
