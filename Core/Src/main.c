@@ -66,6 +66,16 @@ void printk(char *format, ...);
 /* USER CODE BEGIN 0 */
 #define BL_RX_LEN 200
 uint8_t bl_rx_buffer[BL_RX_LEN];
+uint8_t supported_commands[] = {
+		BL_GET_VER,
+		BL_GET_HELP,
+		BL_GET_CID,
+		BL_GET_RDP_STATUS,
+		BL_GO_TO_ADDR,
+		BL_FLASH_ERASE,
+		BL_MEM_WRITE,
+		BL_READ_SECTOR_STATUS
+};
 
 /* USER CODE END 0 */
 
@@ -179,9 +189,29 @@ void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer) {
 
 	}
 }
-/*Send back all supported command codes*/
 void bootloader_handle_gethelp_cmd(uint8_t *bl_rx_buffer) {
+		//verify checksum of command
+		//printk("LOADER_DEBUG_MSG: Handling GET_VER_COMMAND \r\n");
 
+		//length of our packet
+		uint32_t command_packet_len = bl_rx_buffer[0] + 1;
+
+		//extract crc from frame
+		uint32_t host_crc = *((uint32_t*) (bl_rx_buffer + command_packet_len - 4));
+
+		if (!bootloader_verify_crc(&bl_rx_buffer[0], command_packet_len - 4,
+				host_crc)) {
+			//printk("LOADER_DEBUG_MSG: checksum success! \r\n");
+			//Correct crc
+			bootloader_send_ack(bl_rx_buffer[0], sizeof(supported_commands));
+			//printk("LOADER_DEBUG_MSG: BL_VER : %d %#x \r\n", bl_version,bl_version);
+			bootloader_uart_write_data(supported_commands, sizeof(supported_commands));
+		} else {
+			//Bad checksum NACK
+			printk("LOADER_DEBUG_MSG: checksum fail !c \r\n");
+			bootloader_send_nack();
+
+		}
 }
 void bootloader_handle_getcid_cmd(uint8_t *bl_rx_buffer) {
 }
@@ -220,6 +250,9 @@ void bootloader_uart_read_data(void) {
 		switch (bl_rx_buffer[1]) {
 		case BL_GET_VER:
 			bootloader_handle_getver_cmd(bl_rx_buffer);
+			break;
+		case BL_GET_HELP:
+			bootloader_handle_gethelp_cmd(bl_rx_buffer);
 			break;
 		default:
 			printk("LOADER_ERROR_MSG: Invalid command from host: %#n \r\n",
