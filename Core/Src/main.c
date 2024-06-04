@@ -62,6 +62,7 @@ void printk(char *format, ...);
 uint16_t get_mcu_chip_id(void);
 uint8_t get_flash_rdp_level(void);
 uint8_t verify_address(uint32_t go_address);
+uint8_t execute_flash_erase(uint8_t sector_number, uint8_t number_of_sectors);
 
 /* USER CODE END PFP */
 
@@ -348,7 +349,68 @@ void bootloader_handle_go_cmd(uint8_t *bl_rx_buffer) {
 	}
 
 }
+
+uint8_t execute_flash_erase(uint8_t sector_number, uint8_t number_of_sectors)
+{
+	FLASH_EraseInitTypeDef flasherase_handle;
+	uint32_t sectorError;
+	HAL_StatusTypeDef status;
+
+	if(number_of_sectors > 8)
+		return INVALID_SECTOR;
+	if((sector_number == 0xff) ||  (sector_number <= 7))
+	{
+		if(sector_number == (uint8_t) 0xff)
+		{
+			flasherase_handle.TypeErase = FLASH_TYPEERASE_MASSERASE;
+		}else {
+			uint8_t remaining_sector = 8 - sector_number;
+			if(number_of_sectors > remaining_sector)
+			{
+				number_of_sectors = remaining_sector;
+			}
+			flasherase_handle.TypeErase = FLASH_TYPEERASE_SECTORS;
+			flasherase_handle.Sector = sector_number;
+			flasherase_handle.NbSectors = number_of_sectors;
+		}
+		flasherase_handle.Banks = FLASH_BANK_1;
+		HAL_FLASH_Unlock();
+		flasherase_handle.VoltageRange = FLASH_VOLTAGE_RANGE_3;
+		status = (uint8_t) HAL_FLASHEx_Erase(&flasherase_handle, &sectorError);
+		HAL_FLASH_Lock();
+
+		return status;
+	}
+
+	return INVALID_SECTOR;
+
+}
 void bootloader_handle_flash_erase_cmd(uint8_t *bl_rx_buffer) {
+	uint8_t erase_status = 0x00;
+	//verify checksum of command
+	//printk("LOADER_DEBUG_MSG: Handling GET_VER_COMMAND \r\n");
+
+	//length of our packet
+	uint32_t command_packet_len = bl_rx_buffer[0] + 1;
+
+	//extract crc from frame
+	uint32_t host_crc = *((uint32_t*) (bl_rx_buffer + command_packet_len - 4));
+
+	if (!bootloader_verify_crc(&bl_rx_buffer[0], command_packet_len - 4,
+			host_crc)) {
+		//printk("LOADER_DEBUG_MSG: checksum success! \r\n");
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
+		HAL_Delay(100);
+		erase_status = execute_flash_erase(bl_rx_buffer[2], bl_rx_buffer[3]);
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 0);
+		bootloader_uart_write_data(&erase_status, 1);
+	} else {
+		//Bad checksum NACK
+		printk("LOADER_DEBUG_MSG: checksum fail !c \r\n");
+		bootloader_send_nack();
+
+	}
+
 }
 void bootloader_handle_mem_write_cmd(uint8_t *bl_rx_buffer) {
 }
@@ -391,6 +453,9 @@ void bootloader_uart_read_data(void) {
 			break;
 		case BL_GO_TO_ADDR:
 			bootloader_handle_go_cmd(bl_rx_buffer);
+			break;
+		case BL_FLASH_ERASE:
+			bootloader_handle_flash_erase_cmd(bl_rx_buffer);
 			break;
 		default:
 			printk("LOADER_ERROR_MSG: Invalid command from host: %#n \r\n",

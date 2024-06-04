@@ -188,6 +188,8 @@ void bootloader_uart_write_data(uint8_t *pBuffer, uint32_t len);
 #define BKPSRAM_SIZE           4*1024     // STM32F446RE has 4KB of SRAM2
 #define BKPSRAM_END            (BKPSRAM_BASE + BKPSRAM_SIZE)
 
+#define INVALID_SECTOR 0x04
+
 
 
 
