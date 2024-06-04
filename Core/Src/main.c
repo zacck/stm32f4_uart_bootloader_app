@@ -398,6 +398,7 @@ void bootloader_handle_flash_erase_cmd(uint8_t *bl_rx_buffer) {
 
 	if (!bootloader_verify_crc(&bl_rx_buffer[0], command_packet_len - 4,
 			host_crc)) {
+		bootloader_send_ack(bl_rx_buffer[0], 1);
 		//printk("LOADER_DEBUG_MSG: checksum success! \r\n");
 		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, 1);
 		HAL_Delay(100);
@@ -412,7 +413,61 @@ void bootloader_handle_flash_erase_cmd(uint8_t *bl_rx_buffer) {
 	}
 
 }
+
+uint8_t execute_mem_write(uint8_t *pBuffer, uint32_t mem_address, uint32_t len)
+{
+	uint8_t status = HAL_OK;
+
+	HAL_FLASH_Unlock();
+
+	for(uint32_t i = 0; i < len; i ++)
+	{
+		status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, mem_address+i, pBuffer[i]);
+	}
+
+	HAL_FLASH_Lock();
+	return status;
+}
+
+
+
+
 void bootloader_handle_mem_write_cmd(uint8_t *bl_rx_buffer) {
+
+	uint8_t write_status = 0x00;
+	uint8_t payload_len = bl_rx_buffer[6];
+	uint32_t mem_address = *((uint32_t *)(&bl_rx_buffer[2]));
+
+
+
+	//length of our packet
+	uint32_t command_packet_len = bl_rx_buffer[0] + 1;
+
+	//extract crc from frame
+	uint32_t host_crc = *((uint32_t*) (bl_rx_buffer + command_packet_len - 4));
+
+	if (!bootloader_verify_crc(&bl_rx_buffer[0], command_packet_len - 4,
+			host_crc)) {
+		bootloader_send_ack(bl_rx_buffer[0], 1);
+		//printk("LOADER_DEBUG_MSG: checksum success! \r\n");
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 1);
+		if(verify_address(mem_address) == ADDR_VALID){
+		HAL_Delay(100);
+		write_status = execute_mem_write(&bl_rx_buffer[7], mem_address, payload_len);
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, 0);
+		bootloader_uart_write_data(&write_status, 1);
+		}
+		else {
+			write_status = ADDR_INVALID;
+			bootloader_uart_write_data(&write_status, 1);
+		}
+	} else {
+		//Bad checksum NACK
+		printk("LOADER_DEBUG_MSG: checksum fail !c \r\n");
+		bootloader_send_nack();
+
+	}
+
 }
 void bootloader_handle_endis_rw_protect(uint8_t *bl_rx_buffer) {
 }
@@ -456,6 +511,9 @@ void bootloader_uart_read_data(void) {
 			break;
 		case BL_FLASH_ERASE:
 			bootloader_handle_flash_erase_cmd(bl_rx_buffer);
+			break;
+		case BL_MEM_WRITE:
+			bootloader_handle_mem_write_cmd(bl_rx_buffer);
 			break;
 		default:
 			printk("LOADER_ERROR_MSG: Invalid command from host: %#n \r\n",
